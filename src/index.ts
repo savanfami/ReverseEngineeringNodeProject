@@ -1,6 +1,4 @@
-// import axios, { AxiosInstance, AxiosResponse } from 'axios';
-// import { promises as fs } from 'fs';
-// import { join } from 'path';
+import { Controller } from "./controller/controller";
 
-
-
+const controller = new Controller();
+controller.execute();
