@@ -16,13 +16,16 @@ export class Controller {
 
   async execute(): Promise<void> {
     try {
-      const token = await this.authModel.getAuthToken();
-      const users = await this.userModel.getUsers(token);
-      const authUser = await this.userModel.getAuthenticatedUser(token);
-      const output: User[] = [...users, authUser];
+      const token =await this.authModel.login();
+      const users= await this.userModel.getUsers(token as string);
+      // console.log(users,'userss')
+      // console.log(users,'users')
+      // const authUser = await this.authModel.getAuthenticatedUser(token);
+  
+      const output: User[] = [...users];
       await this.outputView.saveUsers(output);
     } catch (error: any) {
-      console.error('Error:', error.message);
+      console.error('error ', error);
     }
   }
 }

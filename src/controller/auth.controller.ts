@@ -1,46 +1,113 @@
 import axios, { AxiosInstance } from 'axios';
-import { promises as fs } from 'fs';
-import { join } from 'path';
 import { config } from '../config/env';
-import { Auth } from '../types/types';
+
+
 
 export class AuthController {
   private httpClient: AxiosInstance;
-  private authFile: string = join(__dirname, '../../auth.json');
+
 
   constructor() {
     this.httpClient = axios.create({
       baseURL: config.baseUrl,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      withCredentials: true,
     });
   }
 
-  async login(): Promise<string> {
-    try {
-      const response = await this.httpClient.post('/login', {
-        email: config.email,
-        password: config.password,
-      });
-      const token: string = response.data.token || response.headers['set-cookie']?.[0];
-      if (!token) throw new Error('No token received');
-      await fs.writeFile(this.authFile, JSON.stringify({ token }, null, 2));
-      return token;
-    } catch (error: any) {
-      throw new Error(`Login failed: ${error.message}`);
+
+async login(): Promise<string | undefined> {
+  try {
+    console.log('Login process started');
+    console.log('Using config:', config);
+
+    const loginPage = await this.httpClient.get('/login');
+    const nonce = loginPage.data;
+
+    const formData = {
+      nonce,
+      username: 'demo@example.org',
+      password: 'test',
+    };
+
+    const response = await this.httpClient.post('/login', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Referer: `${config.baseUrl}/login`,
+        Origin: config.baseUrl,
+      },
+    });
+
+  
+    const cookieHeader = response.headers['set-cookie'];
+
+    if (cookieHeader) {
+      const sessionCookie = cookieHeader.find(cookie => cookie.includes('JSESSIONID'));
+      if (sessionCookie) {
+        const token = sessionCookie.split(';')[0];
+        return token; 
+      } else {
+        console.error('Session cookie (JSESSIONID) not found');
+      }
+    } else {
+      console.error('No set-cookie header received');
     }
+  } catch (err: any) {
+    console.error('Login failed ',err);
   }
 
-  async getAuthToken(): Promise<string> {
-    try {
-      const authData: Auth = JSON.parse(await fs.readFile(this.authFile, 'utf-8'));
- 
-      await this.httpClient.get('/settings', {
-        headers: { Authorization: `Bearer ${authData.token}` },
-      });
-      return authData.token;
-    } catch (error: any) {
-      console.log('Invalid or missing token, re-authenticating...');
-      return await this.login();
-    }
-  }
+  return undefined; // fallback if token not returned
 }
+
+  // async getAuthenticatedUser(token: string): Promise<User> {
+  //   try {
+
+  //     console.log('herererrrrrrrrrrrrrrrrrrrrr')
+  //     const getResponse = await this.httpClient.get('/settings/tokens', {
+  //       headers: {
+  //         Cookie: token,
+  //         'Content-Type': 'application/x-www-form-urlencoded',
+  //         'Accept': '*/*',
+  //       },
+  //     });
+
+  //     const $ = load(getResponse.data);
+  //     const authData = {
+  //       token: token,
+  //       access_token: $('input#access_token').val() as string,
+  //       openId: $('input#openId').val() as string,
+  //       userId: $('input#userId').val() as string,
+  //       apiuser: $('input#apiuser').val() as string,
+  //       operateId: $('input#operateId').val() as string,
+  //       language: $('input#language').val() as string,
+  //     };
+  //     const timestamp = Math.floor(Date.now() / 1000).toString();
+  //     const formData = {
+  //       access_token: authData.access_token,
+  //       apiuser: authData.apiuser,
+  //       language: authData.language,
+  //       openId: authData.openId,
+  //       operateId: authData.operateId,
+  //       timestamp,
+  //       userId: authData.userId,
+  //       // checkcode
+  //     };
+
+  //     const postResponse = await axios.post<User>('https://api.challenge.sunvoy.com/api/settings', formData, {
+  //       headers: {
+  //         Cookie: token,
+  //         'Content-Type': 'application/x-www-form-urlencoded',
+  //       },
+  //       withCredentials: true,
+  //     });
+  //     return postResponse.data;
+  //   } catch (err: any) {
+  //     console.error('auth error',err )
+  //   }
+  // }
+}
+
+
+

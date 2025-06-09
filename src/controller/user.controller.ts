@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { User } from '../types/types';
 import { config } from '../config/env';
+// import qs from 'qs';
 
 export class UserController {
   private httpClient: AxiosInstance;
@@ -9,19 +10,13 @@ export class UserController {
     this.httpClient = axios.create({
       baseURL: config.baseUrl,
       headers: { 'Content-Type': 'application/json' },
+      withCredentials: true,
     });
   }
 
   async getUsers(token: string): Promise<User[]> {
-    const response = await this.httpClient.get<User[]>('/api/users', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-  }
-
-  async getAuthenticatedUser(token: string): Promise<User> {
-    const response = await this.httpClient.get<User>('/settings', {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await this.httpClient.post<User[]>('/api/users', {}, {
+      headers: { Cookie: token },
     });
     return response.data;
   }
